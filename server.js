@@ -10,14 +10,19 @@ connectDB();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// --- UPDATED CORS CONFIGURATION ---
+app.use(cors({
+    origin: process.env.FRONTEND_URL, // Only allows your React app to connect
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+}));
+// ----------------------------------
+
 app.use(express.json());
 
 // Routes
 app.use('/api/institutions', instRoutes);
 
-// Error Handling Middleware (Must be after routes)
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
