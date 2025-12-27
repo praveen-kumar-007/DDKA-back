@@ -1,13 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { registerInstitution, getAllInstitutions, updateStatus } = require('../controllers/instController');
+const { 
+    registerInstitution, 
+    getAllInstitutions, 
+    updateStatus, 
+    deleteInstitution 
+} = require('../controllers/instController');
 
-// Temp storage for files before Cloudinary upload
+// Multer setup for temporary file storage
 const upload = multer({ dest: 'uploads/' });
 
+// Public Route: Register
 router.post('/register', upload.single('screenshot'), registerInstitution);
-router.get('/all', getAllInstitutions);
-router.put('/:id', updateStatus);
+
+// Admin Routes
+router.get('/', getAllInstitutions);         // GET /api/institutions
+router.put('/status', updateStatus);         // PUT /api/institutions/status
+router.delete('/:id', deleteInstitution);    // DELETE /api/institutions/:id
 
 module.exports = router;

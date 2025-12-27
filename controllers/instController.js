@@ -2,31 +2,28 @@ const Institution = require('../models/Institution');
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
 
+// 1. Register a new institution with Cloudinary Screenshot
 const registerInstitution = async (req, res) => {
     try {
         const { regNo, transactionId } = req.body;
-        const file = req.file; // File from Multer
+        const file = req.file;
 
         if (!file) {
             return res.status(400).json({ success: false, message: "Payment screenshot is required." });
         }
 
-        // Check for duplicates
         const existing = await Institution.findOne({ $or: [{ regNo }, { transactionId }] });
         if (existing) {
-            if (file) fs.unlinkSync(file.path); // Delete local temp file
+            if (file) fs.unlinkSync(file.path); 
             return res.status(400).json({ success: false, message: "Reg No or Transaction ID already exists." });
         }
 
-        // Upload to Cloudinary
         const result = await cloudinary.uploader.upload(file.path, {
             folder: 'ddka_payments',
         });
 
-        // Delete local temp file after upload
-        fs.unlinkSync(file.path);
+        if (file) fs.unlinkSync(file.path);
 
-        // Save to Database
         const newInstitution = new Institution({
             ...req.body,
             screenshotUrl: result.secure_url
@@ -41,6 +38,7 @@ const registerInstitution = async (req, res) => {
     }
 };
 
+// 2. Get all institutions (For Admin Dashboard)
 const getAllInstitutions = async (req, res) => {
     try {
         const institutions = await Institution.find().sort({ createdAt: -1 });
@@ -50,14 +48,32 @@ const getAllInstitutions = async (req, res) => {
     }
 };
 
+// 3. Update Status (Handles ID from body to match your frontend)
 const updateStatus = async (req, res) => {
     try {
-        const { status } = req.body;
-        const inst = await Institution.findByIdAndUpdate(req.params.id, { status }, { new: true });
+        const { id, status } = req.body; 
+        const inst = await Institution.findByIdAndUpdate(id, { status }, { new: true });
+        
+        if (!inst) return res.status(404).json({ success: false, message: "Record not found" });
+        
         res.status(200).json({ success: true, data: inst });
     } catch (error) {
         res.status(500).json({ success: false, message: "Update failed" });
     }
 };
 
-module.exports = { registerInstitution, getAllInstitutions, updateStatus };
+// 4. Delete Entry
+const deleteInstitution = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deleted = await Institution.findByIdAndDelete(id);
+        
+        if (!deleted) return res.status(404).json({ success: false, message: "Record not found" });
+        
+        res.status(200).json({ success: true, message: "Record deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Delete failed" });
+    }
+};
+
+module.exports = { registerInstitution, getAllInstitutions, updateStatus, deleteInstitution };
