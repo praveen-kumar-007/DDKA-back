@@ -1,37 +1,46 @@
 const Institution = require('../models/Institution');
+const cloudinary = require('cloudinary').v2;
+const fs = require('fs');
 
-// 1. Register a new institution
 const registerInstitution = async (req, res) => {
     try {
         const { regNo, transactionId } = req.body;
+        const file = req.file; // File from Multer
 
-        // Check if Registration Number exists
-        const checkReg = await Institution.findOne({ regNo });
-        if (checkReg) {
-            return res.status(400).json({ success: false, message: "This Registration Number is already registered." });
+        if (!file) {
+            return res.status(400).json({ success: false, message: "Payment screenshot is required." });
         }
 
-        // Check if Transaction ID was already used
-        const checkTxn = await Institution.findOne({ transactionId });
-        if (checkTxn) {
-            return res.status(400).json({ success: false, message: "This Transaction ID has already been submitted." });
+        // Check for duplicates
+        const existing = await Institution.findOne({ $or: [{ regNo }, { transactionId }] });
+        if (existing) {
+            if (file) fs.unlinkSync(file.path); // Delete local temp file
+            return res.status(400).json({ success: false, message: "Reg No or Transaction ID already exists." });
         }
 
-        const newInstitution = new Institution(req.body);
-        await newInstitution.save();
-
-        res.status(201).json({ 
-            success: true, 
-            message: "Institution application submitted successfully!" 
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(file.path, {
+            folder: 'ddka_payments',
         });
 
+        // Delete local temp file after upload
+        fs.unlinkSync(file.path);
+
+        // Save to Database
+        const newInstitution = new Institution({
+            ...req.body,
+            screenshotUrl: result.secure_url
+        });
+
+        await newInstitution.save();
+        res.status(201).json({ success: true, message: "Application submitted successfully!" });
+
     } catch (error) {
-        console.error("Submission Error:", error);
-        res.status(500).json({ success: false, message: "Internal Server Error" });
+        if (req.file) fs.unlinkSync(req.file.path);
+        res.status(500).json({ success: false, message: "Server Error", error: error.message });
     }
 };
 
-// 2. Get all institutions (For Admin)
 const getAllInstitutions = async (req, res) => {
     try {
         const institutions = await Institution.find().sort({ createdAt: -1 });
@@ -41,7 +50,6 @@ const getAllInstitutions = async (req, res) => {
     }
 };
 
-// 3. Update Status
 const updateStatus = async (req, res) => {
     try {
         const { status } = req.body;
@@ -52,5 +60,4 @@ const updateStatus = async (req, res) => {
     }
 };
 
-// EXPORT ALL THREE FUNCTIONS
 module.exports = { registerInstitution, getAllInstitutions, updateStatus };
