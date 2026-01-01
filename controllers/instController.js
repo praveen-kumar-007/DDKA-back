@@ -5,11 +5,16 @@ const fs = require('fs');
 // 1. Register a new institution with Cloudinary Screenshot
 const registerInstitution = async (req, res) => {
     try {
-        const { regNo, transactionId } = req.body;
+        const { regNo, transactionId, acceptedTerms } = req.body;
         const file = req.file;
 
         if (!file) {
             return res.status(400).json({ success: false, message: "Payment screenshot is required." });
+        }
+
+        if (acceptedTerms !== 'true' && acceptedTerms !== true) {
+            if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+            return res.status(400).json({ success: false, message: "You must agree to the Terms & Conditions to register." });
         }
 
         const existing = await Institution.findOne({ $or: [{ regNo }, { transactionId }] });
@@ -26,6 +31,7 @@ const registerInstitution = async (req, res) => {
 
         const newInstitution = new Institution({
             ...req.body,
+            acceptedTerms: acceptedTerms === 'true' || acceptedTerms === true,
             screenshotUrl: result.secure_url
         });
 

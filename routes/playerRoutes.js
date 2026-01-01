@@ -10,7 +10,11 @@ const {
     registerPlayer, 
     getAllPlayers, 
     updatePlayerStatus, 
-    deletePlayer 
+    deletePlayer,
+    getPlayerByIdNo,
+    assignPlayerIdNo,
+    getPlayerById,
+    clearPlayerIdNo,
 } = require('../controllers/playerController');
 
 /**
@@ -27,10 +31,15 @@ router.post('/register', upload.fields([
 
 
 /**
- * @route   GET /api/players/:id
- * @desc    Fetch a single player record by ID for Admin Details
+ * @route   GET /api/players/card/:idNo
+ * @desc    Fetch a single player record by stored ID number for public/dedicated ID card page
  */
-const { getPlayerById } = require('../controllers/playerController');
+router.get('/card/:idNo', getPlayerByIdNo);
+
+/**
+ * @route   GET /api/players/:id
+ * @desc    Fetch a single player record by Mongo _id for Admin Details
+ */
 router.get('/:id', getPlayerById);
 
 /**
@@ -44,6 +53,18 @@ router.get('/', getAllPlayers);
  * @desc    Update verification status (Approve/Reject)
  */
 router.put('/status', updatePlayerStatus);
+
+/**
+ * @route   PUT /api/players/assign-id
+ * @desc    Save/assign an ID card number (idNo) for a player
+ */
+router.put('/assign-id', assignPlayerIdNo);
+
+/**
+ * @route   PUT /api/players/clear-id
+ * @desc    Clear/remove an assigned ID card number for a player
+ */
+router.put('/clear-id', clearPlayerIdNo);
 
 /**
  * @route   DELETE /api/players/:id

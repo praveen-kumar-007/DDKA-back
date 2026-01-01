@@ -14,6 +14,7 @@ const institutionSchema = new mongoose.Schema({
     altPhone: { type: String },
     email: { type: String, required: true },
     address: { type: String, required: true },
+    acceptedTerms: { type: Boolean, required: true, default: false },
     transactionId: { type: String, required: true, unique: true },
     // New Field for Cloudinary URL
     screenshotUrl: { type: String, required: true }, 
