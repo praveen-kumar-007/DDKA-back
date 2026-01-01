@@ -16,8 +16,9 @@ const institutionSchema = new mongoose.Schema({
     address: { type: String, required: true },
     acceptedTerms: { type: Boolean, required: true, default: false },
     transactionId: { type: String, required: true, unique: true },
-    // New Field for Cloudinary URL
+    // Cloudinary URLs
     screenshotUrl: { type: String, required: true }, 
+    instLogoUrl: { type: String, required: true },
     status: { type: String, default: 'Pending', enum: ['Pending', 'Verified', 'Rejected'] }
 }, { timestamps: true });
 

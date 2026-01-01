@@ -6,39 +6,64 @@ const fs = require('fs');
 const registerInstitution = async (req, res) => {
     try {
         const { regNo, transactionId, acceptedTerms } = req.body;
-        const file = req.file;
+        const files = req.files || {};
+        const screenshotFile = Array.isArray(files.screenshot) ? files.screenshot[0] : files.screenshot;
+        const logoFile = Array.isArray(files.instLogo) ? files.instLogo[0] : files.instLogo;
 
-        if (!file) {
+        if (!screenshotFile) {
             return res.status(400).json({ success: false, message: "Payment screenshot is required." });
         }
 
+        if (!logoFile) {
+            if (screenshotFile && fs.existsSync(screenshotFile.path)) fs.unlinkSync(screenshotFile.path);
+            return res.status(400).json({ success: false, message: "Institution / college / club logo is required." });
+        }
+
         if (acceptedTerms !== 'true' && acceptedTerms !== true) {
-            if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+            if (screenshotFile && fs.existsSync(screenshotFile.path)) fs.unlinkSync(screenshotFile.path);
+            if (logoFile && fs.existsSync(logoFile.path)) fs.unlinkSync(logoFile.path);
             return res.status(400).json({ success: false, message: "You must agree to the Terms & Conditions to register." });
         }
 
         const existing = await Institution.findOne({ $or: [{ regNo }, { transactionId }] });
         if (existing) {
-            if (file) fs.unlinkSync(file.path); 
+            if (screenshotFile && fs.existsSync(screenshotFile.path)) fs.unlinkSync(screenshotFile.path); 
+            if (logoFile && fs.existsSync(logoFile.path)) fs.unlinkSync(logoFile.path); 
             return res.status(400).json({ success: false, message: "Reg No or Transaction ID already exists." });
         }
 
-        const result = await cloudinary.uploader.upload(file.path, {
+        const paymentUpload = await cloudinary.uploader.upload(screenshotFile.path, {
             folder: 'ddka_payments',
         });
 
-        if (file) fs.unlinkSync(file.path);
+        if (screenshotFile && fs.existsSync(screenshotFile.path)) fs.unlinkSync(screenshotFile.path);
+
+        const logoUpload = await cloudinary.uploader.upload(logoFile.path, {
+            folder: 'ddka_institution_logos',
+        });
+        const logoUrl = logoUpload.secure_url;
+        if (fs.existsSync(logoFile.path)) fs.unlinkSync(logoFile.path);
 
         const newInstitution = new Institution({
             ...req.body,
             acceptedTerms: acceptedTerms === 'true' || acceptedTerms === true,
-            screenshotUrl: result.secure_url
+            screenshotUrl: paymentUpload.secure_url,
+            instLogoUrl: logoUrl
         });
 
         await newInstitution.save();
         res.status(201).json({ success: true, message: "Application submitted successfully!" });
     } catch (error) {
-        if (req.file) fs.unlinkSync(req.file.path);
+        if (req.files) {
+            const files = req.files;
+            ['screenshot', 'instLogo'].forEach((field) => {
+                const f = files[field];
+                const file = Array.isArray(f) ? f[0] : f;
+                if (file && fs.existsSync(file.path)) {
+                    fs.unlinkSync(file.path);
+                }
+            });
+        }
         res.status(500).json({ success: false, message: "Server Error", error: error.message });
     }
 };

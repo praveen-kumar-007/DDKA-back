@@ -12,8 +12,15 @@ const {
 // Multer setup for temporary file storage
 const upload = multer({ dest: 'uploads/' });
 
-// Public Route: Register
-router.post('/register', upload.single('screenshot'), registerInstitution);
+// Public Route: Register (payment screenshot + optional institution logo)
+router.post(
+    '/register',
+    upload.fields([
+        { name: 'screenshot', maxCount: 1 },
+        { name: 'instLogo', maxCount: 1 },
+    ]),
+    registerInstitution
+);
 
 
 // Admin Routes
