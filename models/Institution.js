@@ -19,7 +19,7 @@ const institutionSchema = new mongoose.Schema({
     // Cloudinary URLs
     screenshotUrl: { type: String, required: true }, 
     instLogoUrl: { type: String, required: true },
-    status: { type: String, default: 'Pending', enum: ['Pending', 'Verified', 'Rejected'] }
+    status: { type: String, default: 'Pending', enum: ['Pending', 'Approved', 'Rejected'] }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Institution', institutionSchema);
