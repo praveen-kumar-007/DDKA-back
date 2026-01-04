@@ -1,5 +1,13 @@
 const Admin = require('../models/Admin');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
+// Generate JWT for admin
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: '30d',
+  });
+};
 
 // Admin Signup
 const signup = async (req, res) => {
@@ -74,11 +82,12 @@ const login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid Admin ID or Password' });
     }
 
-    // Successful login
+    // Successful login - issue JWT for protected admin routes
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      adminId: admin.username
+      adminId: admin.username,
+      token: generateToken(admin._id),
     });
   } catch (error) {
     console.error('Login Error:', error);
