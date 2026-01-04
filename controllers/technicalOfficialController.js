@@ -26,12 +26,14 @@ exports.registerTechnicalOfficial = async (req, res) => {
       work,
       mobile,
       education,
-      email
+      email,
+      transactionId
     } = req.body;
 
     const files = req.files || {};
     const signatureFile = Array.isArray(files.signature) ? files.signature[0] : files.signature;
     const photoFile = Array.isArray(files.photo) ? files.photo[0] : files.photo;
+    const receiptFile = Array.isArray(files.receipt) ? files.receipt[0] : files.receipt;
 
     // Validate required text fields
     if (
@@ -45,44 +47,56 @@ exports.registerTechnicalOfficial = async (req, res) => {
       !work ||
       !mobile ||
       !education ||
-      !email
+      !email ||
+      !transactionId
     ) {
       safeUnlink(signatureFile);
       safeUnlink(photoFile);
-      return res.status(400).json({ success: false, message: 'All fields are mandatory.' });
+      safeUnlink(receiptFile);
+      return res.status(400).json({ success: false, message: 'All fields are mandatory, including Transaction ID.' });
     }
 
     // Validate files
-    if (!signatureFile || !photoFile) {
+    if (!signatureFile || !photoFile || !receiptFile) {
       safeUnlink(signatureFile);
       safeUnlink(photoFile);
-      return res.status(400).json({ success: false, message: 'Signature and Passport Size Photo are required.' });
+      safeUnlink(receiptFile);
+      return res.status(400).json({ success: false, message: 'Signature, Passport Size Photo and Payment Screenshot are required.' });
     }
 
-    // Basic duplicate check by Aadhar or Email
+    // Basic duplicate check by Aadhar, Email or Transaction ID
     const existing = await TechnicalOfficial.findOne({
-      $or: [{ aadharNumber }, { email }]
+      $or: [
+        { aadharNumber },
+        { email },
+        { transactionId: transactionId && transactionId.toUpperCase().trim() }
+      ]
     });
 
     if (existing) {
       safeUnlink(signatureFile);
       safeUnlink(photoFile);
-      return res.status(400).json({ success: false, message: 'Aadhar Number or Email already registered as Technical Official.' });
+      safeUnlink(receiptFile);
+      return res.status(400).json({ success: false, message: 'Aadhar Number, Email or Transaction ID already registered as Technical Official.' });
     }
 
     // Upload to Cloudinary
-    const [signatureUpload, photoUpload] = await Promise.all([
+    const [signatureUpload, photoUpload, receiptUpload] = await Promise.all([
       cloudinary.uploader.upload(signatureFile.path, {
         folder: 'ddka/technical-officials/signatures'
       }),
       cloudinary.uploader.upload(photoFile.path, {
         folder: 'ddka/technical-officials/photos'
+      }),
+      cloudinary.uploader.upload(receiptFile.path, {
+        folder: 'ddka/technical-officials/payments'
       })
     ]);
 
     // Cleanup temp files
     safeUnlink(signatureFile);
     safeUnlink(photoFile);
+    safeUnlink(receiptFile);
 
     const official = new TechnicalOfficial({
       candidateName,
@@ -97,6 +111,9 @@ exports.registerTechnicalOfficial = async (req, res) => {
       mobile,
       education,
       email,
+      transactionId: transactionId.toUpperCase().trim(),
+      examFee: 1000,
+      receiptUrl: receiptUpload.secure_url,
       signatureUrl: signatureUpload.secure_url,
       photoUrl: photoUpload.secure_url,
       status: 'Pending'
@@ -114,6 +131,7 @@ exports.registerTechnicalOfficial = async (req, res) => {
       const files = req.files;
       safeUnlink(files.signature);
       safeUnlink(files.photo);
+      safeUnlink(files.receipt);
     }
     console.error('registerTechnicalOfficial error:', error);
     return res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });

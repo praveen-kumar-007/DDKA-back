@@ -21,6 +21,12 @@ const technicalOfficialSchema = new mongoose.Schema({
   mobile: { type: String, required: true, trim: true },
   education: { type: String, required: true, trim: true },
   email: { type: String, required: true, trim: true },
+
+  // Payment details (exam fee currently fixed at ₹1000)
+  transactionId: { type: String, trim: true },
+  examFee: { type: Number, default: 1000 },
+  receiptUrl: { type: String },
+
   signatureUrl: { type: String, required: true },
   photoUrl: { type: String, required: true },
   status: {

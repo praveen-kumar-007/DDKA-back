@@ -20,7 +20,8 @@ router.post(
   '/register',
   upload.fields([
     { name: 'signature', maxCount: 1 },
-    { name: 'photo', maxCount: 1 }
+    { name: 'photo', maxCount: 1 },
+    { name: 'receipt', maxCount: 1 }
   ]),
   registerTechnicalOfficial
 );
