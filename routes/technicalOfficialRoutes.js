@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { protect, admin } = require('../middleware/authMiddleware');
+const { protect, admin, isSuperAdmin, requirePermission } = require('../middleware/authMiddleware');
 
 // Temporary disk storage for uploads (Cloudinary will store permanently)
 const upload = multer({ dest: 'uploads/' });
@@ -26,11 +26,11 @@ router.post(
   registerTechnicalOfficial
 );
 
-// Admin routes (protected)
-router.get('/', protect, admin, getAllTechnicalOfficials);
-router.get('/:id', protect, admin, getTechnicalOfficialById);
-router.put('/status', protect, admin, updateTechnicalOfficialStatus);
-router.put('/:id', protect, admin, updateTechnicalOfficial);
-router.delete('/:id', protect, admin, deleteTechnicalOfficial);
+// Admin routes (protected, Technical Officials tab)
+router.get('/', protect, admin, requirePermission('canAccessTechnicalOfficials'), getAllTechnicalOfficials);
+router.get('/:id', protect, admin, requirePermission('canAccessTechnicalOfficials'), getTechnicalOfficialById);
+router.put('/status', protect, admin, requirePermission('canAccessTechnicalOfficials'), updateTechnicalOfficialStatus);
+router.put('/:id', protect, admin, requirePermission('canAccessTechnicalOfficials'), updateTechnicalOfficial);
+router.delete('/:id', protect, isSuperAdmin, deleteTechnicalOfficial);
 
 module.exports = router;

@@ -20,10 +20,13 @@ const protect = async (req, res, next) => {
 
       // Get admin from token
       req.admin = await Admin.findById(decoded.id).select('-password');
-
       if (!req.admin) {
         return res.status(401).json({ message: 'Not authorized, admin not found' });
       }
+
+      // Attach role and permissions for downstream checks
+      req.adminRole = req.admin.role;
+      req.adminPermissions = req.admin.permissions || {};
 
       return next();
     } catch (error) {
@@ -36,13 +39,34 @@ const protect = async (req, res, next) => {
   return res.status(401).json({ message: 'Not authorized, no token' });
 };
 
-// Admin middleware
+// Admin middleware (any logged-in admin)
 const admin = (req, res, next) => {
   if (req.admin) {
-    next();
-  } else {
-    res.status(401).json({ message: 'Not authorized as admin' });
+    return next();
   }
+  return res.status(401).json({ message: 'Not authorized as admin' });
 };
 
-module.exports = { protect, admin };
+// Superadmin-only middleware
+const isSuperAdmin = (req, res, next) => {
+  if (req.admin && req.admin.role === 'superadmin') {
+    return next();
+  }
+  return res.status(403).json({ message: 'Only superadmin can perform this action' });
+};
+
+// Factory for fine-grained permission checks
+const requirePermission = (permissionKey) => (req, res, next) => {
+  if (!req.admin) {
+    return res.status(401).json({ message: 'Not authorized as admin' });
+  }
+
+  // Respect explicit permissions for all roles (including superadmin)
+  if (req.adminPermissions && req.adminPermissions[permissionKey]) {
+    return next();
+  }
+
+  return res.status(403).json({ message: 'You do not have permission for this action' });
+};
+
+module.exports = { protect, admin, isSuperAdmin, requirePermission };

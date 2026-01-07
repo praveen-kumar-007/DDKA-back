@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const { protect, admin, isSuperAdmin, requirePermission } = require('../middleware/authMiddleware');
 const { 
     registerInstitution, 
     getAllInstitutions, 
@@ -23,10 +24,10 @@ router.post(
 );
 
 
-// Admin Routes
-router.get('/:id', getInstitutionById);      // GET /api/institutions/:id
-router.get('/', getAllInstitutions);         // GET /api/institutions
-router.put('/status', updateStatus);         // PUT /api/institutions/status
-router.delete('/:id', deleteInstitution);    // DELETE /api/institutions/:id
+// Admin Routes (Institution Details tab)
+router.get('/:id', protect, admin, requirePermission('canAccessInstitutionDetails'), getInstitutionById);      // GET /api/institutions/:id
+router.get('/', protect, admin, requirePermission('canAccessInstitutionDetails'), getAllInstitutions);         // GET /api/institutions
+router.put('/status', protect, admin, requirePermission('canAccessInstitutionDetails'), updateStatus);         // PUT /api/institutions/status
+router.delete('/:id', protect, isSuperAdmin, deleteInstitution);    // DELETE /api/institutions/:id
 
 module.exports = router;

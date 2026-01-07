@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const { protect, admin, isSuperAdmin, requirePermission } = require('../middleware/authMiddleware');
 
 // Configure temporary storage
 const upload = multer({ dest: 'uploads/' });
@@ -44,32 +45,33 @@ router.get('/:id', getPlayerById);
 
 /**
  * @route   GET /api/players
- * @desc    Fetch all player records for Admin Dashboard
+ * @desc    Fetch all player records for Admin Dashboard (Player Details tab)
  */
-router.get('/', getAllPlayers);
+router.get('/', protect, admin, requirePermission('canAccessPlayerDetails'), getAllPlayers);
 
 /**
  * @route   PUT /api/players/status
- * @desc    Update verification status (Approve/Reject)
+ * @desc    Update verification status (Approve/Reject) from Player Details tab
  */
-router.put('/status', updatePlayerStatus);
+router.put('/status', protect, admin, requirePermission('canAccessPlayerDetails'), updatePlayerStatus);
 
 /**
  * @route   PUT /api/players/assign-id
  * @desc    Save/assign an ID card number (idNo) for a player
  */
-router.put('/assign-id', assignPlayerIdNo);
+router.put('/assign-id', protect, admin, requirePermission('canAccessPlayerDetails'), assignPlayerIdNo);
 
 /**
  * @route   PUT /api/players/clear-id
  * @desc    Clear/remove an assigned ID card number for a player
  */
-router.put('/clear-id', clearPlayerIdNo);
+router.put('/clear-id', protect, admin, requirePermission('canAccessPlayerDetails'), clearPlayerIdNo);
 
 /**
  * @route   DELETE /api/players/:id
  * @desc    Delete a player record permanently
  */
-router.delete('/:id', deletePlayer);
+// Delete player: superadmin only
+router.delete('/:id', protect, isSuperAdmin, deletePlayer);
 
 module.exports = router;

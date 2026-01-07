@@ -65,7 +65,8 @@ app.use(cors({
             callback(new Error('CORS Policy: Origin not allowed by DDKA Security'));
         }
     },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    // Allow PATCH so admin management toggles work (CORS preflight)
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
