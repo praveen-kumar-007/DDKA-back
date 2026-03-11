@@ -45,6 +45,16 @@ const technicalOfficialSchema = new mongoose.Schema({
     default: 'Pending'
   },
   remarks: { type: String, trim: true }
+  ,
+  boardPost: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  showOnRefereeBoard: {
+    type: Boolean,
+    default: true
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('TechnicalOfficial', technicalOfficialSchema);

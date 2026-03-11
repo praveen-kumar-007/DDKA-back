@@ -11,6 +11,11 @@ const refereeSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  boardPost: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   isActive: {
     type: Boolean,
     default: true
