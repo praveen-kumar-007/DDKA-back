@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const jwt = require("jsonwebtoken");
 const TechnicalOfficial = require("../models/TechnicalOfficial");
+const Admin = require("../models/Admin");
 const {
   protect,
   admin,
@@ -57,6 +58,53 @@ const protectOfficial = async (req, res, next) => {
   }
 };
 
+const protectOfficialOrAdmin = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Not authorized, no token" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (!decoded || !decoded.id || !decoded.role) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Not authorized, token invalid" });
+    }
+
+    if (decoded.role === "official") {
+      const official = await TechnicalOfficial.findById(decoded.id).select("_id");
+      if (!official) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Official not found" });
+      }
+      req.user = { id: String(official._id), role: "official" };
+      return next();
+    }
+
+    const adminDoc = await Admin.findById(decoded.id).select("-password");
+    if (adminDoc) {
+      req.admin = adminDoc;
+      req.adminRole = adminDoc.role;
+      req.adminPermissions = adminDoc.permissions || {};
+      return next();
+    }
+
+    return res
+      .status(401)
+      .json({ success: false, message: "Not authorized" });
+  } catch (error) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Not authorized, token failed" });
+  }
+};
+
 // Public registration route
 router.post(
   "/register",
@@ -83,16 +131,12 @@ router.get(
 // Admin download routes by official ID
 router.get(
   "/:id/:assetType/download",
-  protect,
-  admin,
-  requirePermission("canAccessTechnicalOfficials"),
+  protectOfficialOrAdmin,
   downloadOfficialAssetById,
 );
 router.get(
   "/:id/download/:assetType",
-  protect,
-  admin,
-  requirePermission("canAccessTechnicalOfficials"),
+  protectOfficialOrAdmin,
   downloadOfficialAssetById,
 );
 

@@ -717,6 +717,18 @@ exports.downloadOfficialAssetById = async (req, res) => {
         .json({ success: false, message: "Technical Official not found" });
     }
 
+    const isAdminRequest = Boolean(req.admin);
+    const isSelfOfficialRequest =
+      req.user &&
+      req.user.role === "official" &&
+      String(req.user.id || "") === String(id || "");
+
+    if (!isAdminRequest && !isSelfOfficialRequest) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorized to download this asset" });
+    }
+
     if (official.status !== "Approved" || !official.grade) {
       return res
         .status(403)
