@@ -83,6 +83,8 @@ const sanitizeUser = (doc, role) => {
       grade: doc.grade,
       status: doc.status,
       remarks: doc.remarks,
+      idCardDownloadUrl: '/api/technical-officials/me/id-card/download',
+      certificateDownloadUrl: '/api/technical-officials/me/certificate/download',
       createdAt: doc.createdAt
     };
   }

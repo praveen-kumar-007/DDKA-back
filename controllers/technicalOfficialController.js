@@ -1,10 +1,79 @@
 const TechnicalOfficial = require('../models/TechnicalOfficial');
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
+const PDFDocument = require('pdfkit');
 const { sendApprovalEmail, sendRejectionEmail, sendDeletionEmail, sendApplicationReceivedEmail, sendRegistrationNotification } = require('../utils/mailer');
 const { getLoginActivities } = require('../utils/loginActivity');
 
 const shouldExposeLoginHistory = (req) => Boolean(req && req.admin && req.admin.role === 'superadmin');
+
+const buildRegistrationNumber = (official) => {
+  if (!official) return '';
+  if (official.registrationNumber) return official.registrationNumber;
+  return `DDKA-2026-${String(official._id || '').slice(-4).toUpperCase()}`;
+};
+
+const sanitizeFilename = (value) => String(value || 'official').replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || 'official';
+
+const createOfficialPdfBuffer = (official, assetType) => new Promise((resolve, reject) => {
+  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  const chunks = [];
+
+  doc.on('data', (chunk) => chunks.push(chunk));
+  doc.on('end', () => resolve(Buffer.concat(chunks)));
+  doc.on('error', reject);
+
+  const isIdCard = assetType === 'id-card';
+  const heading = isIdCard ? 'DDKA Technical Official ID Card' : 'DDKA Technical Official Certificate';
+  const generatedOn = new Date().toISOString().slice(0, 10);
+  const registrationNo = buildRegistrationNumber(official);
+
+  doc.fontSize(20).text(heading, { align: 'center' });
+  doc.moveDown(0.5);
+  doc.fontSize(10).text('Dhanbad District Kabaddi Association', { align: 'center' });
+  doc.moveDown(1.2);
+
+  doc.fontSize(12).text(`Name: ${official.candidateName || '-'}`);
+  doc.text(`Parent Name: ${official.parentName || '-'}`);
+  doc.text(`Registration No: ${registrationNo || '-'}`);
+  doc.text(`Status: ${official.status || '-'}`);
+  doc.text(`Grade: ${official.grade || '-'}`);
+  doc.text(`Aadhar Number: ${official.aadharNumber || '-'}`);
+  doc.text(`Blood Group: ${official.bloodGroup || 'NA'}`);
+  doc.text(`Date of Birth: ${official.dob ? new Date(official.dob).toISOString().slice(0, 10) : '-'}`);
+  doc.text(`Mobile: ${official.mobile || '-'}`);
+  doc.text(`Email: ${official.email || '-'}`);
+  doc.moveDown(1);
+
+  if (isIdCard) {
+    doc.fontSize(11).text('This is an official Technical Official ID generated from DDKA records.', {
+      align: 'left'
+    });
+  } else {
+    doc.fontSize(11).text('This certificate is issued based on the official data recorded in DDKA.', {
+      align: 'left'
+    });
+  }
+
+  doc.moveDown(2);
+  doc.fontSize(10).text(`Generated on: ${generatedOn}`);
+  doc.text('Verified Source: DDKA Backend Database');
+
+  doc.end();
+});
+
+const sendOfficialAssetDownload = async (res, official, assetType) => {
+  const pdfBuffer = await createOfficialPdfBuffer(official, assetType);
+  const safeName = sanitizeFilename(official.candidateName || 'technical_official');
+  const filename = assetType === 'id-card'
+    ? `ID_${safeName}.pdf`
+    : `${safeName}_Certificate.pdf`;
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'no-store');
+  return res.status(200).send(pdfBuffer);
+};
 
 // Helper to safely delete temp files
 const safeUnlink = (file) => {
@@ -217,6 +286,8 @@ exports.getTechnicalOfficialById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Technical Official not found' });
     }
     const payload = official.toObject();
+    payload.idCardDownloadUrl = `/api/technical-officials/${official._id}/id-card/download`;
+    payload.certificateDownloadUrl = `/api/technical-officials/${official._id}/certificate/download`;
     if (shouldExposeLoginHistory(req)) {
       payload.loginActivities = await getLoginActivities(official._id, 'official');
     }
@@ -506,5 +577,57 @@ exports.deleteTechnicalOfficial = async (req, res) => {
     return res.status(200).json({ success: true, message: 'Technical Official deleted successfully' });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Failed to delete official' });
+  }
+};
+
+// Official self-download: /api/technical-officials/me/:assetType/download
+exports.downloadOwnOfficialAsset = async (req, res) => {
+  try {
+    const { assetType } = req.params;
+    if (!['id-card', 'certificate'].includes(assetType)) {
+      return res.status(400).json({ success: false, message: 'Invalid asset type' });
+    }
+
+    if (!req.user || req.user.role !== 'official' || !req.user.id) {
+      return res.status(401).json({ success: false, message: 'Official authorization required' });
+    }
+
+    const official = await TechnicalOfficial.findById(req.user.id);
+    if (!official) {
+      return res.status(404).json({ success: false, message: 'Technical Official not found' });
+    }
+
+    if (official.status !== 'Approved' || !official.grade) {
+      return res.status(403).json({ success: false, message: 'Asset available only after approval and grade assignment' });
+    }
+
+    return sendOfficialAssetDownload(res, official, assetType);
+  } catch (error) {
+    console.error('downloadOwnOfficialAsset error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to download asset' });
+  }
+};
+
+// Admin download by official id: /api/technical-officials/:id/:assetType/download
+exports.downloadOfficialAssetById = async (req, res) => {
+  try {
+    const { id, assetType } = req.params;
+    if (!['id-card', 'certificate'].includes(assetType)) {
+      return res.status(400).json({ success: false, message: 'Invalid asset type' });
+    }
+
+    const official = await TechnicalOfficial.findById(id);
+    if (!official) {
+      return res.status(404).json({ success: false, message: 'Technical Official not found' });
+    }
+
+    if (official.status !== 'Approved' || !official.grade) {
+      return res.status(403).json({ success: false, message: 'Asset available only after approval and grade assignment' });
+    }
+
+    return sendOfficialAssetDownload(res, official, assetType);
+  } catch (error) {
+    console.error('downloadOfficialAssetById error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to download asset' });
   }
 };
