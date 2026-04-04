@@ -25,7 +25,20 @@ const buildPublicTemplateUrl = (req, official, assetType) => {
   const frontendBase = (
     process.env.FRONTEND_URL || req.headers.origin || "http://localhost:5173"
   ).replace(/\/$/, "");
-  const apiBase = `${req.protocol}://${req.get("host")}`;
+  const forwardedProto = (req.headers["x-forwarded-proto"] || "")
+    .toString()
+    .split(",")[0]
+    .trim();
+  const forwardedHost = (req.headers["x-forwarded-host"] || "")
+    .toString()
+    .split(",")[0]
+    .trim();
+  const host = forwardedHost || req.get("host");
+  const protocol =
+    (process.env.PUBLIC_API_URL && String(process.env.PUBLIC_API_URL).startsWith("https://"))
+      ? "https"
+      : (forwardedProto || (req.secure ? "https" : req.protocol || "https"));
+  const apiBase = (process.env.PUBLIC_API_URL || `${protocol}://${host}`).replace(/\/$/, "");
   const params = new URLSearchParams();
   const suffix = String(official._id || "").slice(-4).toUpperCase();
 
