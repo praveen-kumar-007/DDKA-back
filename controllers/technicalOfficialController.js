@@ -1,7 +1,6 @@
 const TechnicalOfficial = require('../models/TechnicalOfficial');
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
-const PDFDocument = require('pdfkit');
 const { sendApprovalEmail, sendRejectionEmail, sendDeletionEmail, sendApplicationReceivedEmail, sendRegistrationNotification } = require('../utils/mailer');
 const { getLoginActivities } = require('../utils/loginActivity');
 
@@ -13,66 +12,41 @@ const buildRegistrationNumber = (official) => {
   return `DDKA-2026-${String(official._id || '').slice(-4).toUpperCase()}`;
 };
 
-const sanitizeFilename = (value) => String(value || 'official').replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || 'official';
+const buildPublicTemplateUrl = (req, official, assetType) => {
+  const frontendBase = (process.env.FRONTEND_URL || req.headers.origin || 'http://localhost:5173').replace(/\/$/, '');
+  const apiBase = `${req.protocol}://${req.get('host')}`;
+  const params = new URLSearchParams();
+  const suffix = String(official._id || '').slice(-4).toUpperCase();
 
-const createOfficialPdfBuffer = (official, assetType) => new Promise((resolve, reject) => {
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
-  const chunks = [];
+  params.set('api', apiBase);
+  params.set('name', official.candidateName || '');
+  params.set('photoUrl', official.photoUrl || '');
+  params.set('download', 'pdf');
 
-  doc.on('data', (chunk) => chunks.push(chunk));
-  doc.on('end', () => resolve(Buffer.concat(chunks)));
-  doc.on('error', reject);
-
-  const isIdCard = assetType === 'id-card';
-  const heading = isIdCard ? 'DDKA Technical Official ID Card' : 'DDKA Technical Official Certificate';
-  const generatedOn = new Date().toISOString().slice(0, 10);
-  const registrationNo = buildRegistrationNumber(official);
-
-  doc.fontSize(20).text(heading, { align: 'center' });
-  doc.moveDown(0.5);
-  doc.fontSize(10).text('Dhanbad District Kabaddi Association', { align: 'center' });
-  doc.moveDown(1.2);
-
-  doc.fontSize(12).text(`Name: ${official.candidateName || '-'}`);
-  doc.text(`Parent Name: ${official.parentName || '-'}`);
-  doc.text(`Registration No: ${registrationNo || '-'}`);
-  doc.text(`Status: ${official.status || '-'}`);
-  doc.text(`Grade: ${official.grade || '-'}`);
-  doc.text(`Aadhar Number: ${official.aadharNumber || '-'}`);
-  doc.text(`Blood Group: ${official.bloodGroup || 'NA'}`);
-  doc.text(`Date of Birth: ${official.dob ? new Date(official.dob).toISOString().slice(0, 10) : '-'}`);
-  doc.text(`Mobile: ${official.mobile || '-'}`);
-  doc.text(`Email: ${official.email || '-'}`);
-  doc.moveDown(1);
-
-  if (isIdCard) {
-    doc.fontSize(11).text('This is an official Technical Official ID generated from DDKA records.', {
-      align: 'left'
-    });
-  } else {
-    doc.fontSize(11).text('This certificate is issued based on the official data recorded in DDKA.', {
-      align: 'left'
-    });
+  if (assetType === 'id-card') {
+    params.set('sno', suffix);
+    params.set('uid', official.aadharNumber || '');
+    if (official.dob) params.set('dob', new Date(official.dob).toISOString().slice(0, 10));
+    if (official.bloodGroup) params.set('bloodGroup', official.bloodGroup);
+    if (official.grade) params.set('grade', official.grade);
+    return `${frontendBase}/important-docs/technical-id-card.html?${params.toString()}`;
   }
 
-  doc.moveDown(2);
-  doc.fontSize(10).text(`Generated on: ${generatedOn}`);
-  doc.text('Verified Source: DDKA Backend Database');
+  params.set('father', official.parentName || '');
+  params.set('regSuffix', suffix);
+  params.set('date', '2026-01-18');
+  if (official.grade) params.set('grade', official.grade);
+  return `${frontendBase}/important-docs/official-certificate.html?${params.toString()}`;
+};
 
-  doc.end();
-});
+const sendOfficialAssetDownload = async (req, res, official, assetType) => {
+  const downloadUrl = buildPublicTemplateUrl(req, official, assetType);
 
-const sendOfficialAssetDownload = async (res, official, assetType) => {
-  const pdfBuffer = await createOfficialPdfBuffer(official, assetType);
-  const safeName = sanitizeFilename(official.candidateName || 'technical_official');
-  const filename = assetType === 'id-card'
-    ? `ID_${safeName}.pdf`
-    : `${safeName}_Certificate.pdf`;
+  if (String(req.query.redirect || '') === '1') {
+    return res.redirect(downloadUrl);
+  }
 
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  res.setHeader('Cache-Control', 'no-store');
-  return res.status(200).send(pdfBuffer);
+  return res.status(200).json({ success: true, downloadUrl });
 };
 
 // Helper to safely delete temp files
@@ -601,7 +575,7 @@ exports.downloadOwnOfficialAsset = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Asset available only after approval and grade assignment' });
     }
 
-    return sendOfficialAssetDownload(res, official, assetType);
+    return sendOfficialAssetDownload(req, res, official, assetType);
   } catch (error) {
     console.error('downloadOwnOfficialAsset error:', error);
     return res.status(500).json({ success: false, message: 'Failed to download asset' });
@@ -625,7 +599,7 @@ exports.downloadOfficialAssetById = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Asset available only after approval and grade assignment' });
     }
 
-    return sendOfficialAssetDownload(res, official, assetType);
+    return sendOfficialAssetDownload(req, res, official, assetType);
   } catch (error) {
     console.error('downloadOfficialAssetById error:', error);
     return res.status(500).json({ success: false, message: 'Failed to download asset' });
