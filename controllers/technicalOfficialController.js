@@ -23,7 +23,9 @@ const buildRegistrationNumber = (official) => {
 
 const buildPublicTemplateUrl = (req, official, assetType) => {
   const frontendBase = (
-    process.env.FRONTEND_URL || req.headers.origin || "http://localhost:5173"
+    process.env.FRONTEND_URL ||
+    req.headers.origin ||
+    "http://localhost:5173"
   ).replace(/\/$/, "");
   const forwardedProto = (req.headers["x-forwarded-proto"] || "")
     .toString()
@@ -35,12 +37,17 @@ const buildPublicTemplateUrl = (req, official, assetType) => {
     .trim();
   const host = forwardedHost || req.get("host");
   const protocol =
-    (process.env.PUBLIC_API_URL && String(process.env.PUBLIC_API_URL).startsWith("https://"))
+    process.env.PUBLIC_API_URL &&
+    String(process.env.PUBLIC_API_URL).startsWith("https://")
       ? "https"
-      : (forwardedProto || (req.secure ? "https" : req.protocol || "https"));
-  const apiBase = (process.env.PUBLIC_API_URL || `${protocol}://${host}`).replace(/\/$/, "");
+      : forwardedProto || (req.secure ? "https" : req.protocol || "https");
+  const apiBase = (
+    process.env.PUBLIC_API_URL || `${protocol}://${host}`
+  ).replace(/\/$/, "");
   const params = new URLSearchParams();
-  const suffix = String(official._id || "").slice(-4).toUpperCase();
+  const suffix = String(official._id || "")
+    .slice(-4)
+    .toUpperCase();
 
   params.set("api", apiBase);
   params.set("name", official.candidateName || "");
@@ -154,12 +161,10 @@ exports.registerTechnicalOfficial = async (req, res) => {
       safeUnlink(signatureFile);
       safeUnlink(photoFile);
       safeUnlink(receiptFile);
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "All fields are mandatory, including Transaction ID.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "All fields are mandatory, including Transaction ID.",
+      });
     }
 
     // Validate files
@@ -167,13 +172,11 @@ exports.registerTechnicalOfficial = async (req, res) => {
       safeUnlink(signatureFile);
       safeUnlink(photoFile);
       safeUnlink(receiptFile);
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message:
-            "Signature, Passport Size Photo and Payment Screenshot are required.",
-        });
+      return res.status(400).json({
+        success: false,
+        message:
+          "Signature, Passport Size Photo and Payment Screenshot are required.",
+      });
     }
 
     // Basic duplicate check by Aadhar, Email or Transaction ID
@@ -189,13 +192,11 @@ exports.registerTechnicalOfficial = async (req, res) => {
       safeUnlink(signatureFile);
       safeUnlink(photoFile);
       safeUnlink(receiptFile);
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message:
-            "Aadhar Number, Email or Transaction ID already registered as Technical Official.",
-        });
+      return res.status(400).json({
+        success: false,
+        message:
+          "Aadhar Number, Email or Transaction ID already registered as Technical Official.",
+      });
     }
 
     // Upload to Cloudinary
@@ -294,13 +295,11 @@ exports.registerTechnicalOfficial = async (req, res) => {
       safeUnlink(files.receipt);
     }
     console.error("registerTechnicalOfficial error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal Server Error",
-        error: error.message,
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
 
@@ -594,13 +593,11 @@ exports.updateTechnicalOfficial = async (req, res) => {
         .json({ success: false, message: "Technical Official not found" });
     }
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Technical Official updated successfully",
-        data: updated,
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Technical Official updated successfully",
+      data: updated,
+    });
   } catch (error) {
     if (req.files) {
       const files = req.files;
@@ -659,12 +656,10 @@ exports.deleteTechnicalOfficial = async (req, res) => {
       }
     }
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Technical Official deleted successfully",
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Technical Official deleted successfully",
+    });
   } catch (error) {
     return res
       .status(500)
@@ -696,12 +691,10 @@ exports.downloadOwnOfficialAsset = async (req, res) => {
     }
 
     if (official.status !== "Approved" || !official.grade) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Asset available only after approval and grade assignment",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Asset available only after approval and grade assignment",
+      });
     }
 
     return sendOfficialAssetDownload(req, res, official, assetType);
@@ -739,16 +732,17 @@ exports.downloadOfficialAssetById = async (req, res) => {
     if (!isAdminRequest && !isSelfOfficialRequest) {
       return res
         .status(403)
-        .json({ success: false, message: "Not authorized to download this asset" });
+        .json({
+          success: false,
+          message: "Not authorized to download this asset",
+        });
     }
 
     if (official.status !== "Approved" || !official.grade) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Asset available only after approval and grade assignment",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Asset available only after approval and grade assignment",
+      });
     }
 
     return sendOfficialAssetDownload(req, res, official, assetType);

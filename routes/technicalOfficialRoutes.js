@@ -77,7 +77,9 @@ const protectOfficialOrAdmin = async (req, res, next) => {
     }
 
     if (decoded.role === "official") {
-      const official = await TechnicalOfficial.findById(decoded.id).select("_id");
+      const official = await TechnicalOfficial.findById(decoded.id).select(
+        "_id",
+      );
       if (!official) {
         return res
           .status(401)
@@ -95,9 +97,7 @@ const protectOfficialOrAdmin = async (req, res, next) => {
       return next();
     }
 
-    return res
-      .status(401)
-      .json({ success: false, message: "Not authorized" });
+    return res.status(401).json({ success: false, message: "Not authorized" });
   } catch (error) {
     return res
       .status(401)
