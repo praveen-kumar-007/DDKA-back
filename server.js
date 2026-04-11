@@ -157,6 +157,15 @@ app.use(errorHandler);
 
 // 8. Server Activation
 const PORT = process.env.PORT || 5000;
+
+const KEEP_ALIVE_INTERVAL_MS = Number(process.env.KEEP_ALIVE_INTERVAL_MS) || 10 * 60 * 1000;
+const KEEP_ALIVE_ENABLED = process.env.KEEP_ALIVE_ENABLED !== 'false';
+
+const normalizeBaseUrl = (rawUrl) => {
+    if (!rawUrl) return null;
+    return rawUrl.replace(/\/$/, '');
+};
+
 app.listen(PORT, () => {
     console.log(`
     ============================================
@@ -164,4 +173,31 @@ app.listen(PORT, () => {
     MODE: ${process.env.NODE_ENV || 'Development'}
     ============================================
     `);
+
+    // Keep Render service awake by pinging the deployed URL every 10 minutes.
+    const keepAliveBaseUrl = normalizeBaseUrl(
+        process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL || process.env.BACKEND_URL
+    );
+
+    if (!KEEP_ALIVE_ENABLED) {
+        return;
+    }
+
+    if (!keepAliveBaseUrl) {
+        console.warn('Keep-alive is enabled but no URL is configured. Set KEEP_ALIVE_URL or BACKEND_URL.');
+        return;
+    }
+
+    const keepAliveEndpoint = `${keepAliveBaseUrl}/`;
+
+    setInterval(async () => {
+        try {
+            const response = await fetch(keepAliveEndpoint);
+            console.log(`Keep-alive ping: ${response.status} ${response.statusText} -> ${keepAliveEndpoint}`);
+        } catch (error) {
+            console.error('Keep-alive ping failed:', error.message);
+        }
+    }, KEEP_ALIVE_INTERVAL_MS);
+
+    console.log(`Keep-alive enabled: pinging ${keepAliveEndpoint} every ${Math.floor(KEEP_ALIVE_INTERVAL_MS / 60000)} minutes.`);
 });
