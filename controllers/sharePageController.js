@@ -1,67 +1,76 @@
 // sharePageController.js
-const escapeHtml = (str = '') =>
+const escapeHtml = (str = "") =>
   String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 
-const FRONTEND_BASE = (process.env.FRONTEND_URL || 'https://dhanbadkabaddiassociation.tech').replace(/\/$/, '');
+const FRONTEND_BASE = (
+  process.env.FRONTEND_URL || "https://dhanbadkabaddiassociation.tech"
+).replace(/\/$/, "");
 
 const pages = {
   register: {
-    title: 'Player Registration | DDKA',
-    description: 'Register as a Kabaddi player with Dhanbad District Kabaddi Association (DDKA). Online form for players in Dhanbad, Jharkhand.',
-    path: '/register'
+    title: "Player Registration | DDKA",
+    description:
+      "Register as a Kabaddi player with Dhanbad District Kabaddi Association (DDKA). Online form for players in Dhanbad, Jharkhand.",
+    path: "/register",
   },
   institution: {
-    title: 'Institution Affiliation | DDKA',
-    description: 'Register your school, college or club for affiliation with DDKA. Join the Dhanbad kabaddi community.',
-    path: '/institution'
+    title: "Institution Affiliation | DDKA",
+    description:
+      "Register your school, college or club for affiliation with DDKA. Join the Dhanbad kabaddi community.",
+    path: "/institution",
   },
   contact: {
-    title: 'Contact DDKA',
-    description: 'Get in touch with Dhanbad District Kabaddi Association (DDKA) for queries, tournament details and affiliation.',
-    path: '/contact'
+    title: "Contact DDKA",
+    description:
+      "Get in touch with Dhanbad District Kabaddi Association (DDKA) for queries, tournament details and affiliation.",
+    path: "/contact",
   },
   gallery: {
-    title: 'DDKA Gallery',
-    description: 'Photos and highlights from DDKA events and tournaments.',
-    path: '/gallery'
+    title: "DDKA Gallery",
+    description: "Photos and highlights from DDKA events and tournaments.",
+    path: "/gallery",
   },
-  'hall-of-fame': {
-    title: 'Hall of Fame | DDKA',
-    description: 'Honouring the finest kabaddi players from Dhanbad who made us proud.',
-    path: '/hall-of-fame'
+  "hall-of-fame": {
+    title: "Hall of Fame | DDKA",
+    description:
+      "Honouring the finest kabaddi players from Dhanbad who made us proud.",
+    path: "/hall-of-fame",
   },
-  'terms-conditions': {
-    title: 'Terms & Conditions | DDKA',
-    description: 'Official terms and conditions for registrations and participation with DDKA.',
-    path: '/terms-conditions'
+  "terms-conditions": {
+    title: "Terms & Conditions | DDKA",
+    description:
+      "Official terms and conditions for registrations and participation with DDKA.",
+    path: "/terms-conditions",
   },
-  'privacy-policy': {
-    title: 'Privacy Policy | DDKA',
-    description: 'Our privacy practices and how we handle personal information for DDKA registrations and services.',
-    path: '/privacy-policy'
+  "privacy-policy": {
+    title: "Privacy Policy | DDKA",
+    description:
+      "Our privacy practices and how we handle personal information for DDKA registrations and services.",
+    path: "/privacy-policy",
   },
-  'kabaddi-rules': {
-    title: 'Kabaddi Rules | DDKA',
-    description: 'Official kabaddi rules and playing guidelines as followed by DDKA.',
-    path: '/kabaddi-rules'
+  "kabaddi-rules": {
+    title: "Kabaddi Rules | DDKA",
+    description:
+      "Official kabaddi rules and playing guidelines as followed by DDKA.",
+    path: "/kabaddi-rules",
   },
-  'technical-official-registration': {
-    title: 'Technical Official Registration | DDKA',
-    description: 'Register as a referee or technical official with DDKA.',
-    path: '/technical-official-registration'
-  }
+  "technical-official-registration": {
+    title: "Technical Official Registration | DDKA",
+    description: "Register as a referee or technical official with DDKA.",
+    path: "/technical-official-registration",
+  },
 };
 
 exports.sharePage = async (req, res) => {
   try {
     const slug = req.params.slug;
     const page = pages[slug];
-    if (!page) return res.status(404).send('Page not found');
+    if (!page) return res.status(404).send("Page not found");
 
     const pageUrl = `${FRONTEND_BASE}${page.path}`;
     const title = escapeHtml(page.title);
@@ -97,9 +106,9 @@ exports.sharePage = async (req, res) => {
   </body>
 </html>`;
 
-    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.set("Content-Type", "text/html; charset=utf-8");
     return res.status(200).send(html);
   } catch (error) {
-    return res.status(500).send('Error generating preview');
+    return res.status(500).send("Error generating preview");
   }
 };
