@@ -92,9 +92,8 @@ exports.sharePage = async (req, res) => {
     <meta name="robots" content="index,follow" />
   </head>
   <body>
-    <p>This page is a preview for sharing and indexing. You will be redirected in a moment to <a href="${pageUrl}">${pageUrl}</a>.</p>
-    <noscript><p>If not redirected automatically, <a href="${pageUrl}">click here</a>.</p></noscript>
-    <script>setTimeout(function(){ window.location.replace('${pageUrl}'); }, 2500);</script>
+    <p>This page is a preview for sharing and indexing. Open it directly on frontend: <a href="${pageUrl}">${pageUrl}</a>.</p>
+    <p><a href="${pageUrl}">Open on frontend</a></p>
   </body>
 </html>`;
 

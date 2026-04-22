@@ -145,12 +145,8 @@ exports.shareNewsById = async (req, res) => {
     <meta name="robots" content="index,follow" />
   </head>
   <body>
-    <p>This page contains a preview for sharing. You will be redirected shortly: <a href="${articleUrl}">${articleUrl}</a></p>
-    <noscript><p>If you are not redirected automatically, <a href="${articleUrl}">click here</a>.</p></noscript>
-    <script>
-      // gentle redirect for real users after 3 seconds to preserve crawler access to OG tags
-      setTimeout(function(){ window.location.href = '${articleUrl}'; }, 3000);
-    </script>
+    <p>This page contains a share preview for the article. Open it directly on frontend: <a href="${articleUrl}">${articleUrl}</a>.</p>
+    <p><a href="${articleUrl}">Open on frontend</a></p>
   </body>
 </html>`;
 
